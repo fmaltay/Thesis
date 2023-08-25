@@ -1,0 +1,399 @@
+---
+title: "plots"
+format: html
+editor: visual
+---
+# Loading data
+```{r}
+library(PRROC)
+library(pROC)
+library(tidyr)
+library(tidyverse)
+library(broom)
+library(car)
+library(MASS)
+library(ROCR)
+library(RColorBrewer)
+
+df <- readRDS("alldata4.RDS")
+set.seed(123)
+
+
+#split into male and female
+mannen <- subset(df, df$Sex==0)
+vrouwen <- subset(df, df$Sex==1)
+#split data into 70 training 30 test for both and female
+dtm = sort(sample(nrow(mannen), nrow(mannen)*.7))
+trainm<-mannen[dtm,]
+testm<-mannen[-dtm,]
+
+dtv = sort(sample(nrow(vrouwen),nrow(vrouwen)*.7))
+trainv<-vrouwen[dtv,]
+testv<-vrouwen[-dtv,]
+```
+
+# Males Model Fitting
+
+```{r}
+#| echo: false
+model1man <- glm(irondef~Age+Hb+ HPfreqdonatiem + BMI + testseizoen,data = trainm, family = "binomial")
+
+prob <- predict(model1man,testm, type = "response")
+prediction1 <- prediction(prob, testm$irondef)
+perf1 <- performance(prediction1, "prec", "rec")
+perf1a <- data.frame(perf1@x.values,perf1@y.values, "model1", "Male")
+names(perf1a)<-c("x", "y", "model", "sex")
+
+
+model2man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen + haem+ non_haem + HeavyADays + ModADays + DaysW10Min,data = trainm, family = "binomial")
+
+prob2 <- predict(model2man,testm, type = "response")
+prediction2 <- prediction(prob2, testm$irondef)
+perf2 <- performance(prediction2, "prec", "rec")
+perf2a <- data.frame(perf2@x.values,perf2@y.values, "model2", "Male")
+names(perf2a)<-c("x", "y", "model", "sex")
+
+
+model3man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen + haem+ non_haem + HeavyADays + ModADays + DaysW10Min+ I(RBC^2) + RET + MCV,data = trainm, family = "binomial")
+
+
+
+prob3 <- predict(model3man,testm, type = "response")
+prediction3 <- prediction(prob3, testm$irondef)
+perf3 <- performance(prediction3, "prec", "rec")
+perf3a <- data.frame(perf3@x.values,perf3@y.values, "model3", "Male")
+names(perf3a)<-c("x", "y", "model", "sex")
+
+
+model4man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen + haem + non_haem + HeavyADays + ModADays + DaysW10Min + I(RBC^2) + RET + MCV,data = trainm, family = "binomial")
+
+
+
+step.model <- stepAIC(model4man, direction = "backward", 
+                      trace = FALSE)
+
+
+prob4 <- predict(step.model,testm, type = "response")
+prediction4 <- prediction(prob4, testm$irondef)
+perf4 <- performance(prediction4, "prec", "rec")
+perf4a <- data.frame(perf4@x.values,perf4@y.values, "model4", "Male")
+names(perf4a)<-c("x", "y", "model", "sex")
+
+aupr.males <- rbind(perf1a, perf2a, perf3a, perf4a)
+```
+
+
+# Females Model Fitting
+
+```{r}
+model1vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen,data = trainv, family = "binomial")
+
+probb <- predict(model1vrouw,testv, type = "response")
+prediction1 <- prediction(probb, testv$irondef)
+perf1 <- performance(prediction1, "prec", "rec")
+perf1a <- data.frame(perf1@x.values,perf1@y.values, "model1", "Female")
+names(perf1a)<-c("x", "y", "model", "sex")
+
+
+model2vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score:MenL4M) + MenL4M,data = trainv, family = "binomial")
+
+probb2 <- predict(model2vrouw,testv, type = "response")
+prediction2 <- prediction(probb2, testv$irondef)
+perf2 <- performance(prediction2, "prec", "rec")
+perf2a <- data.frame(perf2@x.values,perf2@y.values, "model2", "Female")
+names(perf2a)<-c("x", "y", "model", "sex")
+
+
+
+
+
+model3vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score:MenL4M)+ MenL4M + RBC + RET + MCV ,data = trainv, family = "binomial")
+
+probb3 <- predict(model3vrouw,testv, type = "response")
+prediction3 <- prediction(probb3, testv$irondef)
+perf3 <- performance(prediction3, "prec", "rec")
+perf3a <- data.frame(perf3@x.values,perf3@y.values, "model3", "Female")
+names(perf3a)<-c("x", "y", "model", "sex")
+
+
+
+
+model4vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score:MenL4M)+ MenL4M +  RBC + RET + MCV   ,data = trainv, family = "binomial")
+
+
+step.modelv <- stepAIC(model4vrouw, direction = "backward", 
+                      trace = FALSE)
+
+probb4 <- predict(step.modelv,testv, type = "response")
+prediction4 <- prediction(probb4, testv$irondef)
+perf4 <- performance(prediction4, "prec", "rec")
+perf4a <- data.frame(perf4@x.values,perf4@y.values, "model4", "Female")
+names(perf4a)<-c("x", "y", "model", "sex")
+
+aupr.females <- rbind(perf1a, perf2a, perf3a, perf4a)
+AUPRdata <- rbind(aupr.males, aupr.females)
+```
+
+#ROC
+# Males Model Fitting
+
+```{r}
+#| echo: false
+model1man <- glm(irondef~Age+Hb+ HPfreqdonatiem + BMI + testseizoen,data = trainm, family = "binomial")
+
+prob <- predict(model1man,testm, type = "response")
+prediction1 <- prediction(prob, testm$irondef)
+perf1 <- performance(prediction1, "tpr", "fpr")
+perf1a <- data.frame(perf1@x.values,perf1@y.values, "model1", "Male")
+names(perf1a)<-c("x", "y", "model", "sex")
+
+
+model2man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen + haem+ non_haem + HeavyADays + ModADays + DaysW10Min,data = trainm, family = "binomial")
+
+prob2 <- predict(model2man,testm, type = "response")
+prediction2 <- prediction(prob2, testm$irondef)
+perf2 <- performance(prediction2, "tpr", "fpr")
+perf2a <- data.frame(perf2@x.values,perf2@y.values, "model2", "Male")
+names(perf2a)<-c("x", "y", "model", "sex")
+
+
+model3man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen + haem+ non_haem + HeavyADays + ModADays + DaysW10Min+ I(RBC^2) + RET + MCV,data = trainm, family = "binomial")
+
+
+
+prob3 <- predict(model3man,testm, type = "response")
+prediction3 <- prediction(prob3, testm$irondef)
+perf3 <- performance(prediction3, "tpr", "fpr")
+perf3a <- data.frame(perf3@x.values,perf3@y.values, "model3", "Male")
+names(perf3a)<-c("x", "y", "model", "sex")
+
+
+model4man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen + haem + non_haem + HeavyADays + ModADays + DaysW10Min + I(RBC^2) + RET + MCV,data = trainm, family = "binomial")
+
+
+
+step.model <- stepAIC(model4man, direction = "backward", 
+                      trace = FALSE)
+
+
+prob4 <- predict(step.model,testm, type = "response")
+prediction4 <- prediction(prob4, testm$irondef)
+perf4 <- performance(prediction4, "tpr", "fpr")
+perf4a <- data.frame(perf4@x.values,perf4@y.values, "model4", "Male")
+names(perf4a)<-c("x", "y", "model", "sex")
+
+AUROC.males <- rbind(perf1a, perf2a, perf3a, perf4a)
+```
+
+
+# Females Model Fitting
+
+```{r}
+model1vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen,data = trainv, family = "binomial")
+
+probb <- predict(model1vrouw,testv, type = "response")
+prediction1 <- prediction(probb, testv$irondef)
+perf1 <- performance(prediction1, "tpr", "fpr")
+perf1a <- data.frame(perf1@x.values,perf1@y.values, "model1", "Female")
+names(perf1a)<-c("x", "y", "model", "sex")
+
+
+model2vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score:MenL4M) + MenL4M,data = trainv, family = "binomial")
+
+probb2 <- predict(model2vrouw,testv, type = "response")
+prediction2 <- prediction(probb2, testv$irondef)
+perf2 <- performance(prediction2, "tpr", "fpr")
+perf2a <- data.frame(perf2@x.values,perf2@y.values, "model2", "Female")
+names(perf2a)<-c("x", "y", "model", "sex")
+
+
+
+
+
+model3vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score:MenL4M)+ MenL4M + RBC + RET + MCV ,data = trainv, family = "binomial")
+
+probb3 <- predict(model3vrouw,testv, type = "response")
+prediction3 <- prediction(probb3, testv$irondef)
+perf3 <- performance(prediction3, "tpr", "fpr")
+perf3a <- data.frame(perf3@x.values,perf3@y.values, "model3", "Female")
+names(perf3a)<-c("x", "y", "model", "sex")
+
+
+
+
+model4vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score:MenL4M)+ MenL4M +  RBC + RET + MCV   ,data = trainv, family = "binomial")
+
+
+step.modelv <- stepAIC(model4vrouw, direction = "backward", 
+                      trace = FALSE)
+
+probb4 <- predict(step.modelv,testv, type = "response")
+prediction4 <- prediction(probb4, testv$irondef)
+perf4 <- performance(prediction4, "tpr", "fpr")
+perf4a <- data.frame(perf4@x.values,perf4@y.values, "model4", "Female")
+names(perf4a)<-c("x", "y", "model", "sex")
+
+AUROC.females <- rbind(perf1a, perf2a, perf3a, perf4a)
+AUROCdata <- rbind(AUROC.males, AUROC.females)
+```
+
+
+# PR
+```{r}
+AUPRplot <- ggplot(data=AUPRdata)+
+  geom_line(aes(x=x, y=y, col = model), position = position_dodge(0.07))+
+  facet_grid(~factor(sex, levels=c("Male", "Female")))+
+  xlab("Recall")+
+  ylab("Precision")+
+  ggtitle("Model performance (AUPR)")+theme_bw()+scale_color_discrete(name=" Model(AU M/F)", labels=c(" 1(0.45/0.52)", " 2(0.41/0.55)", " 3(0.49/0.66)", " 4(0.45/0.65)"))
+AUPRplot
+ggsave(AUPRplot, filename="aupr.png", height = 5, width = 10)
+```
+
+
+```{r}
+ROCplot <- ggplot(data=AUROCdata)+
+  geom_line(aes(x=x, y=y, col = model), position = position_dodge(0.1))+
+  facet_grid(~factor(sex, levels=c("Male", "Female")))+
+  xlab("False positive rate")+
+  ylab("True positive rate")+
+  ggtitle("Model performance (ROC)")+scale_color_discrete(name="Model(AU M/F)", labels=c(" 1(0.93/0.82)", " 2(0.90/0.84)", " 3(0.94/0.89)", " 4(0.94/0.88)"))+ theme_bw()
+ROCplot
+ggsave(ROCplot, filename="roc.png", height = 5, width = 10)
+```
+# forrest males
+```{r}
+
+
+model1man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen,data = trainm, family = "binomial")
+
+model1man_coef<- as.data.frame(tidy(model1man, conf.int = T, exponentiate = F))
+model1man_coef$model <- "Model 1"
+model1man_coef$sex <- "Male"
+model1man_coef <- model1man_coef[2:nrow(model1man_coef),]
+model1man_coef <- model1man_coef%>% mutate(significant = ifelse(p.value < 0.05, 1,0), significant = as.factor(significant)) 
+
+model2man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min ,data = trainm, family = "binomial")
+
+model2man_coef<- as.data.frame(tidy(model2man, conf.int = T, exponentiate = F)) #@furkan: CHECKEN OF EXPONENTIATE MOET!!!
+model2man_coef$model <- "Model 2"
+model2man_coef$sex <- "Male"
+model2man_coef <- model2man_coef[2:nrow(model2man_coef),]
+model2man_coef <- model2man_coef%>% mutate(significant = ifelse(p.value < 0.05, 1,0), significant = as.factor(significant))
+
+model3man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min  +  I(RBC^2) + RET + MCV ,data = trainm, family = "binomial")
+
+model3man_coef<- as.data.frame(tidy(model3man, conf.int = T, exponentiate = F))
+model3man_coef$model <- "Model 3"
+model3man_coef$sex <- "Male"
+model3man_coef <- model3man_coef[2:nrow(model3man_coef),]
+model3man_coef <- model3man_coef%>% mutate(significant = ifelse(p.value < 0.05, 1,0), significant = as.factor(significant)) 
+
+model4man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min  +  I(RBC^2) + RET + MCV   ,data = trainm, family = "binomial")
+
+
+step.modelv <- stepAIC(model4man, direction = "backward", 
+                      trace = FALSE)
+
+model4man_coef<- as.data.frame(tidy(step.modelv, conf.int = T, exponentiate = F))
+model4man_coef$model <- "Model 4"
+model4man_coef$sex <- "Male"
+model4man_coef2 <- model4man_coef[2:nrow(model4man_coef),]
+model4man_coef3 <- model4man_coef2%>% mutate(significant = ifelse(p.value < 0.05, 1,0), significant = as.factor(significant)) 
+
+
+test <- rbind(model1man_coef, model2man_coef, model3man_coef, model4man_coef3)
+test <- test %>% na.omit()
+test <- test %>% mutate(term = replace(term,term == "HPfreqdonatiemmid","Donations in 2 years(med)")) %>%mutate(term = replace(term,term == "HPfreqdonatiemhigh","Donations in 2 years(high)")) %>% mutate(term = replace(term,term == "testseizoenwarm","Warm Season")) %>% mutate(term = replace(term,term == "HeavyADays","Heavy Activity")) %>% mutate(term = replace(term,term == "ModADays","Moderate Activity")) %>% mutate(term = replace(term,term == "DaysW10Min","Days Walking"))  %>% mutate(term = replace(term,term == "haem","Haem")) %>% mutate(term = replace(term,term == "non_haem","Non Haem")) %>%  mutate(term = replace(term,term == "I(RBC^2)","RBC^2")) %>% mutate(term = as.factor(term))
+
+test$term <- factor(test$term, levels=c("Age","Hb","Donations in 2 years(med)","Donations in 2 years(high)","BMI",
+                                        "Warm Season","Haem", "Non Haem", 
+                                        "Heavy Activity","Moderate Activity", "Days Walking","RBC^2","RET","MCV"))
+
+
+forestm <- ggplot(data=test, aes(x=term, y=estimate)) + coord_flip()+
+  geom_errorbar(aes(ymin=conf.low, ymax=conf.high, col= model),width = 0.3,size  = 0.5, position = "dodge") +facet_grid(~model) + theme_bw()+  geom_point(aes(colour = model,fill= significant), shape=21, size=1.2)+  scale_fill_manual(values=c("white","black"), label = c("No", "Yes"), name = "Statistical significance \n (p<0.05)")+  theme(axis.text.x = element_text(angle = 225-180, vjust = 1, hjust=1 ), legend.position = "none" ) + ggtitle("Male") + ylab("Coefficients") + xlab("Predictors") + theme(legend.key.size = unit(0.5, 'cm'), #change legend key size 
+        legend.key.height = unit(0.5, 'cm'), #change legend key height
+
+        legend.key.width = unit(0.5, 'cm'), legend.position = "bottom", axis.title.y = element_blank(), legend.title=element_text(size=7), legend.text=element_text(size=7)) + guides(colour = 'none')
+
+
+ #ggarrange(forestf[1] rremove("x.text"), 
+        #  labels = c("A", "B", "C"),
+        #  ncol = 2, nrow = 2)
+plot(forestm) 
+ggsave(forestm, filename="forestmcoef.png", height = 5, width = 9)
+
+
+```
+
+
+
+# Forestplot females
+```{r}
+model1vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen,data = trainv, family = "binomial")
+
+model1vrouw_coef<- as.data.frame(tidy(model1vrouw, conf.int = T, exponentiate = F))
+model1vrouw_coef$model <- "Model 1"
+model1vrouw_coef$sex <- "Female"
+model1vrouw_coef <- model1vrouw_coef[2:nrow(model1vrouw_coef),]
+model1vrouw_coef <- model1vrouw_coef%>% mutate(significant = ifelse(p.value < 0.05, 1,0), significant = as.factor(significant)) 
+
+model2vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score:MenL4M) + MenL4M,data = trainv, family = "binomial")
+
+model2vrouw_coef<- as.data.frame(tidy(model2vrouw, conf.int = T, exponentiate = F)) #@furkan: CHECKEN OF EXPONENTIATE MOET!!!
+model2vrouw_coef$model <- "Model 2"
+model2vrouw_coef$sex <- "Female"
+model2vrouw_coef <- model2vrouw_coef[2:nrow(model2vrouw_coef),]
+model2vrouw_coef <- model2vrouw_coef%>% mutate(significant = ifelse(p.value < 0.05, 1,0), significant = as.factor(significant))
+
+model3vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score:MenL4M)+ MenL4M +  RBC + RET + MCV ,data = trainv, family = "binomial")
+
+model3vrouw_coef<- as.data.frame(tidy(model3vrouw, conf.int = T, exponentiate = F))
+model3vrouw_coef$model <- "Model 3"
+model3vrouw_coef$sex <- "Female"
+model3vrouw_coef <- model3vrouw_coef[2:nrow(model3vrouw_coef),]
+model3vrouw_coef <- model3vrouw_coef%>% mutate(significant = ifelse(p.value < 0.05, 1,0), significant = as.factor(significant)) 
+
+model4vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score:MenL4M)+ MenL4M +  RBC + RET + MCV   ,data = trainv, family = "binomial")
+
+
+step.modelv <- stepAIC(model4vrouw, direction = "backward", 
+                      trace = FALSE)
+
+model4vrouw_coef<- as.data.frame(tidy(step.modelv, conf.int = T, exponentiate = F))
+model4vrouw_coef$model <- "Model 4"
+model4vrouw_coef$sex <- "Female"
+model4vrouw_coef2 <- model4vrouw_coef[2:nrow(model4vrouw_coef),]
+model4vrouw_coef3 <- model4vrouw_coef2%>% mutate(significant = ifelse(p.value < 0.05, 1,0), significant = as.factor(significant)) 
+
+
+test <- rbind(model1vrouw_coef, model2vrouw_coef, model3vrouw_coef, model4vrouw_coef3)
+test <- test %>% na.omit()
+test <- test %>% mutate(term = replace(term,term == "HPfreqdonatie","Donations in 2 years")) %>% mutate(term = replace(term,term == "testseizoenwarm","Warm Season")) %>%
+  mutate(term = replace(term,term == "HeavyADays","Heavy Activity")) %>% mutate(term = replace(term,term == "ModADays","Moderate Activity")) %>% mutate(term = replace(term,term == "DaysW10Min","Days Walking")) %>% mutate(term = replace(term,term == "MenL4M1","Menstruation")) %>% mutate(term = replace(term,term == "haem","Haem")) %>% mutate(term = replace(term,term == "non_haem","Non Haem")) %>% mutate(term = replace(term,term == "MSK_Score:MenL4M1","MSK_Score:Menstruation")) %>% mutate(term = as.factor(term))
+
+test$term <- factor(test$term, levels=c("Age","Hb","Donations in 2 years","BMI",
+                                        "Warm Season","Haem", "Non Haem", 
+                                        "Heavy Activity","Moderate Activity", "Days Walking", "Menstruation", "MSK_Score:Menstruation","RBC","RET","MCV"))
+
+
+forestf <- ggplot(data=test, aes(x=term, y=estimate)) + coord_flip()+
+  geom_errorbar(aes(ymin=conf.low, ymax=conf.high, col= model),width = 0.3,size  = 0.5,position = "dodge") +facet_grid(~model) + theme_bw()+ geom_point(aes(colour = model,fill= significant), shape=21, size=1.2)+  scale_fill_manual(values=c("white","black"), label = c("No", "Yes"), name = "Statistical significance \n (p<0.05)")+ theme(axis.text.x = element_text(angle = 225-180, vjust = 1, hjust=1 ), legend.position = "none" ) + ggtitle("Female") + ylab("Coefficients") + xlab("Predictors") + theme(legend.key.size = unit(0.5, 'cm'), #change legend key size
+
+        legend.key.height = unit(0.5, 'cm'), #change legend key height
+
+        legend.key.width = unit(0.5, 'cm'), legend.position = "bottom", axis.title.y = element_blank(), legend.title=element_text(size=7), legend.text=element_text(size=7)) + guides(colour = 'none')
+
+
+ #ggarrange(forestf[1] rremove("x.text"), 
+        #  labels = c("A", "B", "C"),
+        #  ncol = 2, nrow = 2)
+plot(forestf) 
+ggsave(forestf, filename="forestfcoef.png", height = 5, width = 9)
+
+#library(cowplot)
+
+#combined <- plot_grid(forestm, forestf, nrow=2, rel_heights = c(4/9,5/9), labels = "AUTO")
+#ggsave(combined, filename="combinedforestplot.png", height = 10, width = 9)
+```

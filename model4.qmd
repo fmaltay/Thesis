@@ -1,0 +1,280 @@
+---
+title: "model4"
+format: html
+editor: visual
+---
+
+# Loading data and subsetting
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false 
+library(PRROC)
+library(pROC)
+library(tidyr)
+library(tidyverse)
+library(broom)
+library(car)
+library(MASS)
+
+df <- readRDS("alldata4.RDS")
+set.seed(123)
+
+
+#split into male and female
+mannen <- subset(df, df$Sex==0)
+vrouwen <- subset(df, df$Sex==1)
+#split data into 70 training 30 test for both and female
+dtm = sort(sample(nrow(mannen), nrow(mannen)*.7))
+trainm<-mannen[dtm,]
+testm<-mannen[-dtm,]
+
+dtv = sort(sample(nrow(vrouwen),nrow(vrouwen)*.7))
+trainv<-vrouwen[dtv,]
+testv<-vrouwen[-dtv,]
+
+```
+
+# Mannen
+
+```{r}
+
+#model for male
+modelinm <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI+ testseizoen + haem + non_haem + HeavyADays + ModADays + DaysW10Min + RBCm + RET + MCV,data = mannen, family = "binomial")
+
+
+probm <- predict(modelinm,mannen, type = "response")
+predicted.classes <- ifelse(probm > 0.5, "pos", "neg")
+
+
+```
+
+## Linearity
+
+```{r}
+
+#linearity
+#check for linearity data
+  # Select only numeric predictors
+mydata <- mannen %>%
+  dplyr::select_if(is.numeric) %>% dplyr::select(Age, Hb, BMI,haem, non_haem, HeavyADays, ModADays, DaysW10Min, RET, MCV)
+predictors <- colnames(mydata)
+# Bind the logit and tidying the data for plot
+mydata <- mydata %>%
+  mutate(logit = log(probm/(1-probm))) %>%
+  gather(key = "predictors", value = "predictor.value", -logit)
+
+#plot linearity
+ggplot(mydata, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess") + 
+  theme_bw() + 
+  facet_wrap(~predictors, scales = "free_y")
+
+
+```
+
+## Outlier
+
+```{r}
+#check for outliers
+plot(modelinm, which = 4, id.n = 3)
+
+# Extract model results
+model.data <- augment(modelinm) %>% 
+  mutate(index = 1:n()) 
+
+model.data %>% top_n(3, .cooksd) 
+
+ggplot(model.data, aes(index, .std.resid)) + 
+  geom_point(aes(color = irondef), alpha = .5) +
+  theme_bw()
+
+#removing std. res. above 3
+model.data <- augment(modelinm) %>% 
+  mutate(index = 1:n()) 
+
+model.data %>% top_n(3, .cooksd) %>% 
+  filter(abs(.std.resid) > 3)
+
+ggplot(model.data, aes(index, .std.resid)) + 
+  geom_point(aes(color = irondef), alpha = .5) +
+  theme_bw()
+
+```
+
+## Collinearity
+
+```{R}
+
+#collinearity
+
+car::vif(modelinm)
+
+
+```
+
+## Modelfitting
+
+```{R}
+model1man <- glm(irondef~Age+Hb+HPfreqdonatiem + BMI + testseizoen + haem+ non_haem + HeavyADays + ModADays + DaysW10Min+ RBCm + RET + MCV,data = trainm, family = "binomial")
+
+
+
+step.model <- stepAIC(model1man, direction = "backward", 
+                      trace = FALSE)
+
+
+prob <- predict(step.model,testm, type = "response")
+fgz <- prob[testm$irondef == 1]
+bgz <- prob[testm$irondef == 0]
+
+summary(step.model)
+
+library(broom)
+model4man_coef <- as.data.frame(tidy(step.model))
+
+library("writexl")
+write_xlsx(model4man_coef, "model4mancoef.xls")
+
+```
+
+# Vrouwen
+
+```{r}
+
+
+
+#model zonder dummy variable MENL4M voor controleren op collineariteit
+modelinvv  <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + haem + non_haem + HeavyADays + ModADays + DaysW10Min + MSK_Score +RBC + RET + MCV + MenL4M,data = vrouwen, family = "binomial")
+
+
+
+probv <- predict(modelinvv,vrouwen, type = "response")
+predicted.classes <- ifelse(probv > 0.5, "pos", "neg")
+
+
+```
+
+## Linearity
+
+```{r}
+#linearity
+#check for linearity data
+  # Select only numeric predictors
+mydata2 <- vrouwen %>%
+  dplyr::select_if(is.numeric) %>% dplyr::select(Age, Hb, HPfreqdonatie, BMI,haem, non_haem, HeavyADays, ModADays, DaysW10Min, MSK_Score, RBC, RET, MCV)
+predictorsv <- colnames(mydata2)
+# Bind the logit and tidying the data for plot
+mydata2 <- mydata2 %>%
+  mutate(logit = log(probv/(1-probv))) %>%
+  gather(key = "predictorsv", value = "predictor.value", -logit)
+
+#plot linearity
+ggplot(mydata2, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess") + 
+  theme_bw() + 
+  facet_wrap(~predictorsv, scales = "free_y")
+
+
+```
+
+## Outliers
+
+```{r}
+#check for outliers
+plot(modelinvv, which = 4, id.n = 3)
+
+# Extract model results
+model.data2 <- augment(modelinvv) %>% 
+  mutate(index = 1:n()) 
+
+model.data2 %>% top_n(3, .cooksd) %>% 
+  filter(abs(.std.resid) > 3)
+
+ggplot(model.data2, aes(index, .std.resid)) + 
+  geom_point(aes(color = irondef), alpha = .5) +
+  theme_bw()
+
+
+```
+
+## Collinearity
+
+```{r}
+
+#collinearity
+
+car::vif(modelinvv)
+
+
+```
+
+## Modelfitting
+
+```{r}
+
+model1vrouw <- glm(irondef~Age+Hb+HPfreqdonatie + BMI + testseizoen+ haem+ non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score:MenL4M)+ RBC + RET + MCV + MenL4M ,data = trainv, family = "binomial")
+
+
+
+
+step.modelv <- stepAIC(model1vrouw, direction = "backward", 
+                      trace = FALSE)
+
+
+probb <- predict(step.modelv,testv, type = "response")
+fgzz <- probb[testv$irondef == 1]
+bgzz <- probb[testv$irondef == 0]
+
+
+summary(step.modelv)
+
+library(broom)
+model4vrouw_coef <- as.data.frame(tidy(step.modelv))
+
+library("writexl")
+write_xlsx(model4vrouw_coef, "model4vrouwcoef.xls")
+
+
+```
+
+# ROC curves
+
+```{r}
+#| echo: false
+roc <- roc.curve(scores.class0 = fgz, scores.class1 = bgz, curve = T)
+plot(roc)
+
+roc2 <- roc.curve(scores.class0 = fgzz, scores.class1 = bgzz, curve = T)
+plot(roc2)
+```
+
+# PR curves
+
+```{r}
+#| echo: false
+pr <- pr.curve(scores.class0 = fgz, scores.class1 = bgz, curve = T)
+plot(pr)
+
+pr2 <- pr.curve(scores.class0 = fgzz, scores.class1 = bgzz, curve = T)
+plot(pr2)
+```
+
+# Classification tables
+
+```{r}
+#| echo: false
+#false positive/false negative etc.
+predictions <- bind_cols(testm, prob) %>% rename(prediction = `...21`)
+predictions$predicted_label <- 0 
+predictions$predicted_label[predictions$prediction>0.5] <- 1
+table(predictions$irondef, predictions$predicted_label)
+
+predictions <- bind_cols(testv, probb) %>% rename(prediction = `...21`)
+predictions$predicted_label <- 0 
+predictions$predicted_label[predictions$prediction>0.5] <- 1
+table(predictions$irondef, predictions$predicted_label)
+```

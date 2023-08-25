@@ -1,0 +1,73 @@
+---
+title: "quarto"
+format: html
+editor: visual
+---
+
+```{r}
+#final <- readRDS("alldata4.RDS")
+#library(boot)
+#library(table1)
+#final2 <- final
+
+
+#label(final2$HeavyADays) <- "HeavyADays" 
+#label(final2$ModADays) <- "ModADays" 
+#label(final2$DaysW10Min) <- "DaysW10Min" 
+
+#final2$irondef <-
+ # factor(final2$irondef,levels=c(1,0),
+         #labels=c("Iron Deficiency", "No Deficiency" ))
+
+#table1(~ Age+Hb+HPfreqdonatie + BMI + haem + non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score)+ RBC + RET + MCV  | irondef, data=final2)
+```
+
+\
+
+#Mannen
+
+```{r}
+#| echo: false
+
+final <- readRDS("alldata4.RDS")
+library(boot)
+library(table1)
+final2 <- final
+
+mannen <- subset(final2, final2$Sex==0)
+
+label(mannen$HeavyADays) <- "HeavyADays" 
+label(mannen$ModADays) <- "ModADays" 
+label(mannen$DaysW10Min) <- "DaysW10Min" 
+
+mannen$irondef <-
+  factor(mannen$irondef,levels=c(1,0),
+         labels=c("Iron Deficiency", "No Deficiency" ))
+
+table1(~ Age+Hb+HPfreqdonatiem + BMI + haem + non_haem + HeavyADays + ModADays + DaysW10Min + RBCm + RET + MCV  | irondef, data=mannen)
+```
+
+# Vrouwen
+
+```{r}
+
+#| echo: false
+
+final <- readRDS("dfdescriptwomen.RDS")
+library(boot)
+library(table1)
+final2 <- final
+
+vrouwen <- subset(final2, final2$Sex==1)
+
+label(vrouwen$HeavyADays) <- "HeavyADays" 
+label(vrouwen$ModADays) <- "ModADays" 
+label(vrouwen$DaysW10Min) <- "DaysW10Min" 
+
+vrouwen$irondef <-
+  factor(vrouwen$irondef,levels=c(1,0),
+         labels=c("Iron Deficiency", "No Deficiency" ))
+
+table1(~ Age+Hb+HPfreqdonatie + BMI + haem + non_haem + HeavyADays + ModADays + DaysW10Min + (MSK_Score)+ MenL4M + RBC + RET + MCV  | irondef, data=vrouwen)
+
+```
